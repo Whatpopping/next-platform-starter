@@ -1,0 +1,460 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Play, Pause, SkipBack, SkipForward, Volume2, Search, Home, Music, Radio, Library, Heart, MoreHorizontal, Shuffle, Repeat } from 'lucide-react';
+
+const EchoVibeApp = () => {
+  const [currentPage, setCurrentPage] = useState('discover');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTrack, setCurrentTrack] = useState(null);
+  const [queue, setQueue] = useState([]);
+  const [volume, setVolume] = useState(50);
+  const [progress, setProgress] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [likedSongs, setLikedSongs] = useState(new Set());
+  const [playlists, setPlaylists] = useState([]);
+  const [recentlyPlayed, setRecentlyPlayed] = useState([]);
+  const [recommendations, setRecommendations] = useState([]);
+  
+  const audioRef = useRef(null);
+  const progressRef = useRef(null);
+
+  // Featured playlists and trending music
+  const featuredPlaylists = [
+    { id: 1, name: "Today's Top Hits", description: "The biggest songs right now", tracks: 50 },
+    { id: 2, name: "Chill Vibes", description: "Relax and unwind", tracks: 30 },
+    { id: 3, name: "Workout Mix", description: "High energy tracks", tracks: 40 },
+    { id: 4, name: "Indie Discoveries", description: "Fresh indie music", tracks: 25 },
+  ];
+
+  const trendingTracks = [
+    { id: 1, title: "Blinding Lights", artist: "The Weeknd", duration: "3:20", plays: "1.2B" },
+    { id: 2, title: "Levitating", artist: "Dua Lipa", duration: "3:23", plays: "800M" },
+    { id: 3, title: "Good 4 U", artist: "Olivia Rodrigo", duration: "2:58", plays: "600M" },
+    { id: 4, title: "Stay", artist: "The Kid LAROI & Justin Bieber", duration: "2:21", plays: "900M" },
+    { id: 5, title: "Heat Waves", artist: "Glass Animals", duration: "3:58", plays: "1.5B" },
+  ];
+
+  // YouTube API simulation (in real app, you'd use YouTube Data API)
+  const searchYouTube = async (query) => {
+    setIsLoading(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const mockResults = [
+      { id: 1, title: `${query} - Official Music Video`, artist: "Artist Name", duration: "3:45", thumbnail: "https://via.placeholder.com/60x60/8B5CF6/FFFFFF?text=♪" },
+      { id: 2, title: `${query} (Lyrics)`, artist: "Various Artists", duration: "3:12", thumbnail: "https://via.placeholder.com/60x60/EC4899/FFFFFF?text=♪" },
+      { id: 3, title: `${query} - Acoustic Version`, artist: "Cover Artist", duration: "3:30", thumbnail: "https://via.placeholder.com/60x60/10B981/FFFFFF?text=♪" },
+      { id: 4, title: `${query} - Remix`, artist: "DJ Remix", duration: "4:15", thumbnail: "https://via.placeholder.com/60x60/F59E0B/FFFFFF?text=♪" },
+    ];
+    
+    setSearchResults(mockResults);
+    setIsLoading(false);
+  };
+
+  const playTrack = (track) => {
+    setCurrentTrack(track);
+    setIsPlaying(true);
+    setQueue(prev => [track, ...prev.filter(t => t.id !== track.id)]);
+    
+    // Add to recently played
+    setRecentlyPlayed(prev => [track, ...prev.filter(t => t.id !== track.id)].slice(0, 10));
+    
+    // Simulate audio playback
+    if (audioRef.current) {
+      audioRef.current.play();
+    }
+  };
+
+  const togglePlayPause = () => {
+    setIsPlaying(!isPlaying);
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+    }
+  };
+
+  const toggleLike = (track) => {
+    setLikedSongs(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(track.id)) {
+        newSet.delete(track.id);
+      } else {
+        newSet.add(track.id);
+      }
+      return newSet;
+    });
+  };
+
+  const skipTrack = (direction) => {
+    const currentIndex = queue.findIndex(track => track.id === currentTrack?.id);
+    let nextIndex;
+    
+    if (direction === 'next') {
+      nextIndex = currentIndex + 1;
+    } else {
+      nextIndex = currentIndex - 1;
+    }
+    
+    if (nextIndex >= 0 && nextIndex < queue.length) {
+      playTrack(queue[nextIndex]);
+    }
+  };
+
+  // Simulate progress
+  useEffect(() => {
+    let interval;
+    if (isPlaying) {
+      interval = setInterval(() => {
+        setProgress(prev => (prev >= 100 ? 0 : prev + 1));
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying]);
+
+  const handleSearch = () => {
+    if (searchTerm.trim()) {
+      searchYouTube(searchTerm);
+      setCurrentPage('search');
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  const Navigation = () => (
+    <nav className="fixed left-0 top-0 h-full w-64 bg-gradient-to-b from-gray-900 to-black text-white p-6 overflow-y-auto">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+          EchoVibe
+        </h1>
+        <p className="text-gray-400 text-sm">Stream Your World</p>
+      </div>
+      
+      <div className="space-y-4">
+        <button
+          onClick={() => setCurrentPage('discover')}
+          className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all ${
+            currentPage === 'discover' ? 'bg-purple-600' : 'hover:bg-gray-800'
+          }`}
+        >
+          <Home size={20} />
+          <span>Discover</span>
+        </button>
+        
+        <button
+          onClick={() => setCurrentPage('browse')}
+          className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all ${
+            currentPage === 'browse' ? 'bg-purple-600' : 'hover:bg-gray-800'
+          }`}
+        >
+          <Music size={20} />
+          <span>Browse</span>
+        </button>
+        
+        <button
+          onClick={() => setCurrentPage('radio')}
+          className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all ${
+            currentPage === 'radio' ? 'bg-purple-600' : 'hover:bg-gray-800'
+          }`}
+        >
+          <Radio size={20} />
+          <span>Radio</span>
+        </button>
+        
+        <button
+          onClick={() => setCurrentPage('library')}
+          className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all ${
+            currentPage === 'library' ? 'bg-purple-600' : 'hover:bg-gray-800'
+          }`}
+        >
+          <Library size={20} />
+          <span>Your Library</span>
+        </button>
+      </div>
+      
+      <div className="mt-8">
+        <h3 className="text-gray-400 text-sm font-semibold mb-4">PLAYLISTS</h3>
+        <div className="space-y-2">
+          {featuredPlaylists.map(playlist => (
+            <button
+              key={playlist.id}
+              className="block w-full text-left p-2 rounded hover:bg-gray-800 transition-colors"
+            >
+              <div className="font-medium">{playlist.name}</div>
+              <div className="text-gray-400 text-sm">{playlist.tracks} tracks</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </nav>
+  );
+
+  const Header = () => (
+    <header className="fixed top-0 right-0 left-64 bg-gradient-to-r from-gray-900/90 to-black/90 backdrop-blur-sm text-white p-4 z-10">
+      <div className="flex items-center justify-between">
+        <div className="flex-1 max-w-md">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="Search songs, artists, or albums..."
+              className="w-full pl-10 pr-4 py-2 bg-gray-800 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyPress={handleKeyPress}
+            />
+          </div>
+        </div>
+        
+        <div className="flex items-center space-x-4">
+          <button 
+            onClick={handleSearch}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-full transition-colors"
+          >
+            Search
+          </button>
+          <button className="p-2 hover:bg-gray-800 rounded-full transition-colors">
+            <MoreHorizontal size={20} />
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+
+  const TrackItem = ({ track, showArtist = true, onPlay }) => (
+    <div className="flex items-center space-x-4 p-3 hover:bg-gray-800 rounded-lg transition-colors group">
+      <div className="relative">
+        <img 
+          src={track.thumbnail || "https://via.placeholder.com/48x48/8B5CF6/FFFFFF?text=♪"} 
+          alt={track.title}
+          className="w-12 h-12 rounded object-cover"
+        />
+        <button
+          onClick={() => onPlay(track)}
+          className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <Play size={16} className="text-white" />
+        </button>
+      </div>
+      
+      <div className="flex-1 min-w-0">
+        <div className="font-medium truncate">{track.title}</div>
+        {showArtist && <div className="text-gray-400 text-sm truncate">{track.artist}</div>}
+      </div>
+      
+      <div className="text-gray-400 text-sm">{track.duration}</div>
+      
+      <button
+        onClick={() => toggleLike(track)}
+        className={`p-1 rounded transition-colors ${
+          likedSongs.has(track.id) ? 'text-red-500' : 'text-gray-400 hover:text-red-500'
+        }`}
+      >
+        <Heart size={16} fill={likedSongs.has(track.id) ? 'currentColor' : 'none'} />
+      </button>
+    </div>
+  );
+
+  const DiscoverPage = () => (
+    <div className="space-y-8">
+      <section>
+        <h2 className="text-2xl font-bold mb-6">Featured Playlists</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {featuredPlaylists.map(playlist => (
+            <div key={playlist.id} className="bg-gray-800 p-4 rounded-lg hover:bg-gray-700 transition-colors cursor-pointer">
+              <div className="w-full h-32 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg mb-4 flex items-center justify-center">
+                <Music size={32} className="text-white" />
+              </div>
+              <h3 className="font-semibold mb-1">{playlist.name}</h3>
+              <p className="text-gray-400 text-sm">{playlist.description}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+      
+      <section>
+        <h2 className="text-2xl font-bold mb-6">Trending Now</h2>
+        <div className="space-y-2">
+          {trendingTracks.map(track => (
+            <TrackItem key={track.id} track={track} onPlay={playTrack} />
+          ))}
+        </div>
+      </section>
+      
+      {recentlyPlayed.length > 0 && (
+        <section>
+          <h2 className="text-2xl font-bold mb-6">Recently Played</h2>
+          <div className="space-y-2">
+            {recentlyPlayed.map(track => (
+              <TrackItem key={`recent-${track.id}`} track={track} onPlay={playTrack} />
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+
+  const SearchPage = () => (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold">Search Results for "{searchTerm}"</h2>
+      
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {searchResults.map(track => (
+            <TrackItem key={track.id} track={track} onPlay={playTrack} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const LibraryPage = () => (
+    <div className="space-y-8">
+      <section>
+        <h2 className="text-2xl font-bold mb-6">Liked Songs</h2>
+        {Array.from(likedSongs).length === 0 ? (
+          <p className="text-gray-400">No liked songs yet. Start exploring and like some tracks!</p>
+        ) : (
+          <div className="space-y-2">
+            {trendingTracks.filter(track => likedSongs.has(track.id)).map(track => (
+              <TrackItem key={track.id} track={track} onPlay={playTrack} />
+            ))}
+          </div>
+        )}
+      </section>
+      
+      <section>
+        <h2 className="text-2xl font-bold mb-6">Your Playlists</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="bg-gray-800 p-6 rounded-lg border-2 border-dashed border-gray-600 hover:border-purple-500 transition-colors cursor-pointer">
+            <div className="text-center">
+              <div className="text-4xl mb-2">+</div>
+              <p className="text-gray-400">Create Playlist</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+
+  const MusicPlayer = () => {
+    if (!currentTrack) return null;
+    
+    return (
+      <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-gray-900 to-black text-white p-4 border-t border-gray-800">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4 flex-1">
+            <img 
+              src={currentTrack.thumbnail || "https://via.placeholder.com/48x48/8B5CF6/FFFFFF?text=♪"} 
+              alt={currentTrack.title}
+              className="w-12 h-12 rounded object-cover"
+            />
+            <div className="min-w-0">
+              <div className="font-medium truncate">{currentTrack.title}</div>
+              <div className="text-gray-400 text-sm truncate">{currentTrack.artist}</div>
+            </div>
+            <button
+              onClick={() => toggleLike(currentTrack)}
+              className={`p-1 rounded transition-colors ${
+                likedSongs.has(currentTrack.id) ? 'text-red-500' : 'text-gray-400 hover:text-red-500'
+              }`}
+            >
+              <Heart size={16} fill={likedSongs.has(currentTrack.id) ? 'currentColor' : 'none'} />
+            </button>
+          </div>
+          
+          <div className="flex flex-col items-center space-y-2 flex-1">
+            <div className="flex items-center space-x-4">
+              <button className="p-2 hover:bg-gray-800 rounded-full transition-colors">
+                <Shuffle size={16} />
+              </button>
+              <button 
+                onClick={() => skipTrack('previous')}
+                className="p-2 hover:bg-gray-800 rounded-full transition-colors"
+              >
+                <SkipBack size={16} />
+              </button>
+              <button 
+                onClick={togglePlayPause}
+                className="p-3 bg-purple-600 hover:bg-purple-700 rounded-full transition-colors"
+              >
+                {isPlaying ? <Pause size={20} /> : <Play size={20} />}
+              </button>
+              <button 
+                onClick={() => skipTrack('next')}
+                className="p-2 hover:bg-gray-800 rounded-full transition-colors"
+              >
+                <SkipForward size={16} />
+              </button>
+              <button className="p-2 hover:bg-gray-800 rounded-full transition-colors">
+                <Repeat size={16} />
+              </button>
+            </div>
+            
+            <div className="w-full max-w-md flex items-center space-x-2">
+              <span className="text-xs text-gray-400">1:23</span>
+              <div className="flex-1 bg-gray-700 rounded-full h-1">
+                <div 
+                  className="bg-purple-500 h-1 rounded-full transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <span className="text-xs text-gray-400">{currentTrack.duration}</span>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-2 flex-1 justify-end">
+            <Volume2 size={16} />
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={volume}
+              onChange={(e) => setVolume(e.target.value)}
+              className="w-24 accent-purple-500"
+            />
+          </div>
+        </div>
+        
+        <audio ref={audioRef} />
+      </div>
+    );
+  };
+
+  const renderCurrentPage = () => {
+    switch (currentPage) {
+      case 'discover':
+        return <DiscoverPage />;
+      case 'search':
+        return <SearchPage />;
+      case 'library':
+        return <LibraryPage />;
+      default:
+        return <DiscoverPage />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 text-white">
+      <Navigation />
+      <Header />
+      <main className="ml-64 pt-20 pb-24 p-8">
+        {renderCurrentPage()}
+      </main>
+      <MusicPlayer />
+    </div>
+  );
+};
+
+export default EchoVibeApp;
