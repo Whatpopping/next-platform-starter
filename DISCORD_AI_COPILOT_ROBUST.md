@@ -147,3 +147,78 @@ If you want the fastest path:
 3. Add privacy controls before scaling beyond personal use.
 
 That order gives a working vertical slice quickly while avoiding unsafe defaults.
+
+## 11) Sample visuals (tabs + UI layout)
+
+Below are simple mockups showing how this can look in Discord + desktop agent.
+
+### A) Discord mobile control tab (phone)
+
+```text
+┌───────────────────────────────────────────────┐
+│ Discord • #ai-control                         │
+├───────────────────────────────────────────────┤
+│ /ai start                                     │
+│ ✅ Session started: S-84KQ                    │
+│ 🔗 Link code: 739201                          │
+│                                               │
+│ [ Mode: commentary ▼ ] [ Privacy: window ▼ ]  │
+│ [ Rate: medium ▼ ]                            │
+│                                               │
+│ Buttons                                       │
+│ [Pause AI]  [Resume AI]  [Stop Session]       │
+└───────────────────────────────────────────────┘
+```
+
+### B) Desktop agent main window (PC)
+
+```text
+┌────────────────────────────────────────────────────────────────┐
+│ EchoVibe Agent                                 ● LIVE (ON)     │
+├────────────────────────────────────────────────────────────────┤
+│ Session: S-84KQ  Guild: MyServer  Channel: General Voice       │
+│ Capture Scope: Active Window                                    │
+│                                                                 │
+│  Preview (redaction enabled):                                   │
+│  ┌───────────────────────────────────────────────────────────┐   │
+│  │ Browser - Dashboard                                      │   │
+│  │ Revenue: $██,███   (notification area blurred)           │   │
+│  │ Tasks today: 17                                           │   │
+│  └───────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│ [Start Stream] [Pause] [Stop] [Privacy Settings]               │
+└────────────────────────────────────────────────────────────────┘
+```
+
+### C) Desktop agent tabs (recommended)
+
+- **Overview tab**
+  - Session status, uptime, voice state, and last AI response.
+- **Capture tab**
+  - Monitor/window/app selector, FPS/rate selector, redaction preview.
+- **Audio tab**
+  - Mic input level, push-to-talk toggle, noise suppression, VAD meter.
+- **Privacy tab**
+  - App denylist, sensitive keyword masking, retention settings.
+- **Diagnostics tab**
+  - WebSocket latency, dropped frames, STT/TTS round-trip times.
+
+### D) Voice channel user experience
+
+```text
+[You speaking in Discord VC]
+   "What does this chart show?"
+
+[Bot response in ~1-2s]
+   "The chart shows weekly signups trending up 14%.
+    Biggest spike was on Tuesday after the email campaign."
+```
+
+### E) Suggested color/status indicators
+
+- Green: connected and streaming normally
+- Yellow: degraded mode (e.g., TTS delayed)
+- Red: disconnected or permission error
+- Purple: actively processing your latest speech/frame
+
+These visuals are intentionally low-fidelity so you can quickly convert them into Figma screens or React components.
