@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, SkipBack, SkipForward, Volume2, Search, Home, Music, Radio, Library, Heart, MoreHorizontal, Shuffle, Repeat, FolderTree, ChevronRight, ChevronDown, FileText, Folder } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Volume2, Search, Home, Music, Radio, Library, Heart, MoreHorizontal, Shuffle, Repeat, FolderTree, ChevronRight, ChevronDown, FileText, Folder, BarChart3 } from 'lucide-react';
 
 const EchoVibeApp = () => {
   const [currentPage, setCurrentPage] = useState('discover');
@@ -409,7 +409,13 @@ const EchoVibeApp = () => {
     };
 
     return (
-      <div>
+      <div className="relative">
+        {level > 0 && (
+          <div
+            className="absolute top-0 bottom-0 border-l border-gray-700/80"
+            style={{ left: `${(level - 1) * 18 + 16}px` }}
+          />
+        )}
         <button
           onClick={toggleNode}
           className="flex items-center w-full gap-2 rounded px-2 py-1.5 hover:bg-gray-800 transition-colors"
@@ -430,10 +436,62 @@ const EchoVibeApp = () => {
     );
   };
 
+  const getTreeStats = (nodes) => {
+    let folders = 0;
+    let files = 0;
+
+    const visit = (items) => {
+      items.forEach((item) => {
+        if (item.type === 'folder') {
+          folders += 1;
+          if (item.children) visit(item.children);
+        } else {
+          files += 1;
+        }
+      });
+    };
+
+    visit(nodes);
+    return { folders, files, total: folders + files };
+  };
+
+  const TreeInsights = () => {
+    const stats = getTreeStats(fileTree);
+    const density = Math.round((stats.files / stats.total) * 100);
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="rounded-xl bg-gray-800/70 border border-gray-700 p-4">
+          <div className="text-gray-400 text-sm">Total Nodes</div>
+          <div className="text-2xl font-bold mt-1">{stats.total}</div>
+        </div>
+        <div className="rounded-xl bg-gray-800/70 border border-gray-700 p-4">
+          <div className="text-gray-400 text-sm">Folders</div>
+          <div className="text-2xl font-bold mt-1 text-purple-400">{stats.folders}</div>
+        </div>
+        <div className="rounded-xl bg-gray-800/70 border border-gray-700 p-4">
+          <div className="text-gray-400 text-sm">File Density</div>
+          <div className="text-2xl font-bold mt-1 text-cyan-400">{density}%</div>
+        </div>
+      </div>
+    );
+  };
+
   const TreePage = () => (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Tree Web Interface</h2>
-      <p className="text-gray-400">Browse your project structure with expandable folders and files.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold">Tree Visualization</h2>
+          <p className="text-gray-400">Interactive project map with hierarchy insights.</p>
+        </div>
+        <div className="rounded-lg bg-purple-600/20 border border-purple-500/30 px-3 py-2 flex items-center gap-2 text-purple-300">
+          <BarChart3 size={16} />
+          <span className="text-sm">Live Structure View</span>
+        </div>
+      </div>
+
+      <TreeInsights />
+
       <div className="rounded-xl border border-gray-700 bg-gray-900/70 p-4">
         {fileTree.map(node => (
           <TreeNode key={node.id} node={node} />
