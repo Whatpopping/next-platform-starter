@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, SkipBack, SkipForward, Volume2, Search, Home, Music, Radio, Library, Heart, MoreHorizontal, Shuffle, Repeat } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Volume2, Search, Home, Music, Radio, Library, Heart, MoreHorizontal, Shuffle, Repeat, FolderTree, ChevronRight, ChevronDown, FileText, Folder } from 'lucide-react';
 
 const EchoVibeApp = () => {
   const [currentPage, setCurrentPage] = useState('discover');
@@ -26,6 +26,39 @@ const EchoVibeApp = () => {
     { id: 3, name: "Workout Mix", description: "High energy tracks", tracks: 40 },
     { id: 4, name: "Indie Discoveries", description: "Fresh indie music", tracks: 25 },
   ];
+
+
+  const fileTree = [
+    {
+      id: 'src',
+      name: 'src',
+      type: 'folder',
+      children: [
+        {
+          id: 'src-components',
+          name: 'components',
+          type: 'folder',
+          children: [
+            { id: 'src-components-nav', name: 'Navigation.jsx', type: 'file' },
+            { id: 'src-components-player', name: 'MusicPlayer.jsx', type: 'file' },
+          ],
+        },
+        { id: 'src-app', name: 'App.jsx', type: 'file' },
+      ],
+    },
+    {
+      id: 'public',
+      name: 'public',
+      type: 'folder',
+      children: [
+        { id: 'public-favicon', name: 'favicon.ico', type: 'file' },
+        { id: 'public-cover', name: 'cover.png', type: 'file' },
+      ],
+    },
+    { id: 'package-json', name: 'package.json', type: 'file' },
+  ];
+
+  const [expandedNodes, setExpandedNodes] = useState(new Set(['src', 'src-components', 'public']));
 
   const trendingTracks = [
     { id: 1, title: "Blinding Lights", artist: "The Weeknd", duration: "3:20", plays: "1.2B" },
@@ -168,6 +201,17 @@ const EchoVibeApp = () => {
           <span>Radio</span>
         </button>
         
+
+        <button
+          onClick={() => setCurrentPage('tree')}
+          className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all ${
+            currentPage === 'tree' ? 'bg-purple-600' : 'hover:bg-gray-800'
+          }`}
+        >
+          <FolderTree size={20} />
+          <span>Tree</span>
+        </button>
+
         <button
           onClick={() => setCurrentPage('library')}
           className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all ${
@@ -348,6 +392,56 @@ const EchoVibeApp = () => {
     </div>
   );
 
+
+
+  const TreeNode = ({ node, level = 0 }) => {
+    const isFolder = node.type === 'folder';
+    const isExpanded = expandedNodes.has(node.id);
+
+    const toggleNode = () => {
+      if (!isFolder) return;
+      setExpandedNodes(prev => {
+        const next = new Set(prev);
+        if (next.has(node.id)) next.delete(node.id);
+        else next.add(node.id);
+        return next;
+      });
+    };
+
+    return (
+      <div>
+        <button
+          onClick={toggleNode}
+          className="flex items-center w-full gap-2 rounded px-2 py-1.5 hover:bg-gray-800 transition-colors"
+          style={{ paddingLeft: `${level * 18 + 8}px` }}
+        >
+          {isFolder ? (
+            isExpanded ? <ChevronDown size={16} className="text-gray-400" /> : <ChevronRight size={16} className="text-gray-400" />
+          ) : (
+            <span className="w-4" />
+          )}
+          {isFolder ? <Folder size={16} className="text-purple-400" /> : <FileText size={16} className="text-cyan-400" />}
+          <span>{node.name}</span>
+        </button>
+        {isFolder && isExpanded && node.children?.map(child => (
+          <TreeNode key={child.id} node={child} level={level + 1} />
+        ))}
+      </div>
+    );
+  };
+
+  const TreePage = () => (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold">Tree Web Interface</h2>
+      <p className="text-gray-400">Browse your project structure with expandable folders and files.</p>
+      <div className="rounded-xl border border-gray-700 bg-gray-900/70 p-4">
+        {fileTree.map(node => (
+          <TreeNode key={node.id} node={node} />
+        ))}
+      </div>
+    </div>
+  );
+
   const MusicPlayer = () => {
     if (!currentTrack) return null;
     
@@ -440,6 +534,8 @@ const EchoVibeApp = () => {
         return <SearchPage />;
       case 'library':
         return <LibraryPage />;
+      case 'tree':
+        return <TreePage />;
       default:
         return <DiscoverPage />;
     }
