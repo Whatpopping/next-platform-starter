@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, SkipBack, SkipForward, Volume2, Search, Home, Music, Radio, Library, Heart, MoreHorizontal, Shuffle, Repeat } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Play, Pause, SkipBack, SkipForward, Volume2, Search, Home, Music, Radio, Library, Heart, MoreHorizontal, Shuffle, Repeat, FolderTree, ChevronRight, ChevronDown, FileText, Folder, Orbit } from 'lucide-react';
 
 const EchoVibeApp = () => {
   const [currentPage, setCurrentPage] = useState('discover');
@@ -26,6 +26,38 @@ const EchoVibeApp = () => {
     { id: 3, name: "Workout Mix", description: "High energy tracks", tracks: 40 },
     { id: 4, name: "Indie Discoveries", description: "Fresh indie music", tracks: 25 },
   ];
+
+
+  const fileTree = [
+    {
+      id: 'src',
+      name: 'src',
+      type: 'folder',
+      children: [
+        {
+          id: 'src-components',
+          name: 'components',
+          type: 'folder',
+          children: [
+            { id: 'src-components-nav', name: 'Navigation.jsx', type: 'file' },
+            { id: 'src-components-player', name: 'MusicPlayer.jsx', type: 'file' },
+          ],
+        },
+        { id: 'src-app', name: 'App.jsx', type: 'file' },
+      ],
+    },
+    {
+      id: 'public',
+      name: 'public',
+      type: 'folder',
+      children: [
+        { id: 'public-favicon', name: 'favicon.ico', type: 'file' },
+        { id: 'public-cover', name: 'cover.png', type: 'file' },
+      ],
+    },
+    { id: 'package-json', name: 'package.json', type: 'file' },
+  ];
+
 
   const trendingTracks = [
     { id: 1, title: "Blinding Lights", artist: "The Weeknd", duration: "3:20", plays: "1.2B" },
@@ -168,6 +200,27 @@ const EchoVibeApp = () => {
           <span>Radio</span>
         </button>
         
+
+        <button
+          onClick={() => setCurrentPage('graph')}
+          className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all ${
+            currentPage === 'graph' ? 'bg-purple-600' : 'hover:bg-gray-800'
+          }`}
+        >
+          <Orbit size={20} />
+          <span>Graph</span>
+        </button>
+
+        <button
+          onClick={() => setCurrentPage('tree')}
+          className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all ${
+            currentPage === 'tree' ? 'bg-purple-600' : 'hover:bg-gray-800'
+          }`}
+        >
+          <FolderTree size={20} />
+          <span>Tree</span>
+        </button>
+
         <button
           onClick={() => setCurrentPage('library')}
           className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all ${
@@ -348,6 +401,245 @@ const EchoVibeApp = () => {
     </div>
   );
 
+
+
+  const generateGraphData = (items, selectedId = null) => {
+    const nodes = [];
+    const links = [];
+
+    const traverse = (entries, parentId = null, depth = 0, index = 0) => {
+      entries.forEach((node, idx) => {
+        const nodeDepth = depth + 1;
+        const offset = (idx - (entries.length - 1) / 2) * 110;
+        const graphNode = {
+          id: node.id,
+          name: node.name,
+          type: node.type,
+          color: node.type === 'folder' ? '#3b82f6' : '#67e8f9',
+          x: parentId ? (nodeDepth * 170 + ((index + 1) * 8)) : 140,
+          y: parentId ? (offset + (index * 34)) : (idx - 1) * 140,
+          val: 4,
+        };
+
+        nodes.push(graphNode);
+        if (parentId) links.push({ source: parentId, target: node.id });
+
+        if (node.children?.length) traverse(node.children, node.id, nodeDepth, idx + index + 1);
+      });
+    };
+
+    traverse(items);
+
+    const degree = new Map();
+    links.forEach(({ source, target }) => {
+      degree.set(source, (degree.get(source) || 0) + 1);
+      degree.set(target, (degree.get(target) || 0) + 1);
+    });
+
+    nodes.forEach((node) => {
+      node.val = Math.max(4, (degree.get(node.id) || 0) * 2 + 2);
+    });
+
+    if (!selectedId) return { nodes, links };
+
+    const connected = new Set([selectedId]);
+    links.forEach(({ source, target }) => {
+      if (source === selectedId) connected.add(target);
+      if (target === selectedId) connected.add(source);
+    });
+
+    return {
+      nodes: nodes.filter((node) => connected.has(node.id)),
+      links: links.filter((link) => connected.has(link.source) && connected.has(link.target)),
+    };
+  };
+
+  const GraphPage = () => {
+    const [selectedNode, setSelectedNode] = useState(null);
+    const [hoveredNode, setHoveredNode] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isLocalGraph, setIsLocalGraph] = useState(false);
+
+    const graphData = generateGraphData(fileTree, isLocalGraph && selectedNode ? selectedNode.id : null);
+    const nodeMap = new Map(graphData.nodes.map(node => [node.id, node]));
+    const connectedNodeIds = new Set();
+
+    if (hoveredNode) {
+      connectedNodeIds.add(hoveredNode.id);
+      graphData.links.forEach(({ source, target }) => {
+        if (source === hoveredNode.id || target === hoveredNode.id) {
+          connectedNodeIds.add(source);
+          connectedNodeIds.add(target);
+        }
+      });
+    }
+
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold">🌌 Codex Graph</h2>
+            <p className="text-gray-400">Obsidian-style connections • Hover • Search • Local view</p>
+          </div>
+          <button
+            onClick={() => setIsLocalGraph(!isLocalGraph)}
+            className={`px-4 py-2 rounded-2xl text-sm transition-all ${
+              isLocalGraph ? 'bg-blue-500 text-white' : 'bg-gray-800 hover:bg-gray-700 border border-gray-600'
+            }`}
+          >
+            {isLocalGraph ? '← Global' : 'Local View'}
+          </button>
+        </div>
+
+        <div className="relative">
+          <input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search nodes..."
+            className="w-full bg-gray-900 border border-gray-700 rounded-2xl px-4 py-3 text-sm focus:border-blue-500 focus:outline-none"
+          />
+        </div>
+
+        <div className="rounded-2xl border border-gray-700 bg-black/60 p-4 overflow-auto">
+          <svg viewBox="0 0 1200 620" className="w-full min-w-[800px] h-[620px]">
+            <defs>
+              <linearGradient id="linkGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#334155" />
+                <stop offset="100%" stopColor="#64748b" />
+              </linearGradient>
+            </defs>
+            <g transform="translate(80,310)">
+              {graphData.links.map((link, idx) => {
+                const source = nodeMap.get(link.source);
+                const target = nodeMap.get(link.target);
+                if (!source || !target) return null;
+                const highlighted = hoveredNode && (link.source === hoveredNode.id || link.target === hoveredNode.id);
+                return (
+                  <g key={`link-${idx}`}>
+                    <line x1={source.x} y1={source.y} x2={target.x} y2={target.y} stroke="url(#linkGlow)" strokeWidth={highlighted ? 2.5 : 1.2} opacity={highlighted ? 0.95 : 0.5} />
+                    <circle r="2" fill="#93c5fd">
+                      <animateMotion dur="2.6s" repeatCount="indefinite" path={`M ${source.x} ${source.y} L ${target.x} ${target.y}`} />
+                    </circle>
+                  </g>
+                );
+              })}
+
+              {graphData.nodes.map((node) => {
+                const isMatch = normalizedSearch && node.name.toLowerCase().includes(normalizedSearch);
+                const dimmedBySearch = normalizedSearch && !isMatch;
+                const highlighted = hoveredNode ? connectedNodeIds.has(node.id) : false;
+                const isSelected = selectedNode?.id === node.id;
+                const opacity = dimmedBySearch ? 0.2 : hoveredNode ? (highlighted ? 1 : 0.15) : 1;
+
+                return (
+                  <g key={node.id} transform={`translate(${node.x},${node.y})`} style={{ cursor: 'pointer', opacity }} onMouseEnter={() => setHoveredNode(node)} onMouseLeave={() => setHoveredNode(null)} onClick={() => setSelectedNode(node)}>
+                    <circle r={node.val + (isSelected ? 5 : 0)} fill={isSelected || highlighted || isMatch ? '#a5f3fc' : node.color} className="drop-shadow-[0_0_8px_rgba(103,232,249,0.6)]" />
+                    <text y={node.val + 18} textAnchor="middle" className="fill-gray-200 text-[11px] font-medium">{node.name}</text>
+                  </g>
+                );
+              })}
+            </g>
+          </svg>
+        </div>
+
+        {selectedNode && (
+          <div className="flex items-center justify-between rounded-xl bg-gray-900/80 border border-gray-700 px-4 py-3">
+            <p className="text-sm text-gray-300">Selected: <span className="text-cyan-300">{selectedNode.name}</span></p>
+            <button onClick={() => setSelectedNode(null)} className="text-xs px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-xl">Clear</button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const TreeNode = ({ node, level = 0, expandedNodes, toggleNode }) => {
+    const isFolder = node.type === 'folder';
+    const isExpanded = expandedNodes.has(node.id);
+
+    return (
+      <div className="relative">
+        {level > 0 && (
+          <div
+            className="absolute top-0 bottom-0 border-l border-gray-700"
+            style={{ left: `${(level - 1) * 20 + 19}px` }}
+          />
+        )}
+        <button
+          onClick={() => toggleNode(node.id)}
+          className="flex items-center w-full gap-2 rounded px-2 py-1.5 hover:bg-gray-800/70 transition-all active:bg-gray-700 text-sm"
+          style={{ paddingLeft: `${level * 20 + 8}px` }}
+        >
+          {isFolder ? (
+            isExpanded ?
+              <ChevronDown size={16} className="text-gray-400" /> :
+              <ChevronRight size={16} className="text-gray-400" />
+          ) : (
+            <span className="w-4" />
+          )}
+
+          {isFolder ? (
+            <Folder size={16} className="text-blue-400" />
+          ) : (
+            <FileText size={16} className="text-sky-400" />
+          )}
+
+          <span className="truncate">{node.name}</span>
+        </button>
+
+        {isFolder && isExpanded && node.children?.map(child => (
+          <TreeNode
+            key={child.id}
+            node={child}
+            level={level + 1}
+            expandedNodes={expandedNodes}
+            toggleNode={toggleNode}
+          />
+        ))}
+      </div>
+    );
+  };
+
+  const TreePage = () => {
+    const [expandedNodes, setExpandedNodes] = useState(new Set(['src', 'src-components', 'public']));
+
+    const toggleNode = useCallback((id) => {
+      setExpandedNodes(prev => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+    }, []);
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">Project Tree</h2>
+            <p className="text-gray-400">Interactive file structure explorer</p>
+          </div>
+          <div className="rounded-lg bg-blue-500/10 border border-blue-500/30 px-3 py-1.5 flex items-center gap-2 text-blue-400">
+            <FolderTree size={16} />
+            <span className="text-sm">Live View</span>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-gray-700 bg-gray-900/60 p-4">
+          {fileTree.map(node => (
+            <TreeNode
+              key={node.id}
+              node={node}
+              expandedNodes={expandedNodes}
+              toggleNode={toggleNode}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const MusicPlayer = () => {
     if (!currentTrack) return null;
     
@@ -438,8 +730,12 @@ const EchoVibeApp = () => {
         return <DiscoverPage />;
       case 'search':
         return <SearchPage />;
+      case 'graph':
+        return <GraphPage />;
       case 'library':
         return <LibraryPage />;
+      case 'tree':
+        return <TreePage />;
       default:
         return <DiscoverPage />;
     }
