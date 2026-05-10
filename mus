@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, SkipBack, SkipForward, Volume2, Search, Home, Music, Radio, Library, Heart, MoreHorizontal, Shuffle, Repeat, FolderTree, ChevronRight, ChevronDown, FileText, Folder, BarChart3 } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Play, Pause, SkipBack, SkipForward, Volume2, Search, Home, Music, Radio, Library, Heart, MoreHorizontal, Shuffle, Repeat, FolderTree, ChevronRight, ChevronDown, FileText, Folder } from 'lucide-react';
 
 const EchoVibeApp = () => {
   const [currentPage, setCurrentPage] = useState('discover');
@@ -58,7 +58,6 @@ const EchoVibeApp = () => {
     { id: 'package-json', name: 'package.json', type: 'file' },
   ];
 
-  const [expandedNodes, setExpandedNodes] = useState(new Set(['src', 'src-components', 'public']));
 
   const trendingTracks = [
     { id: 1, title: "Blinding Lights", artist: "The Weeknd", duration: "3:20", plays: "1.2B" },
@@ -394,111 +393,91 @@ const EchoVibeApp = () => {
 
 
 
-  const TreeNode = ({ node, level = 0 }) => {
+  const TreeNode = ({ node, level = 0, expandedNodes, toggleNode }) => {
     const isFolder = node.type === 'folder';
     const isExpanded = expandedNodes.has(node.id);
-
-    const toggleNode = () => {
-      if (!isFolder) return;
-      setExpandedNodes(prev => {
-        const next = new Set(prev);
-        if (next.has(node.id)) next.delete(node.id);
-        else next.add(node.id);
-        return next;
-      });
-    };
 
     return (
       <div className="relative">
         {level > 0 && (
           <div
-            className="absolute top-0 bottom-0 border-l border-gray-700/80"
-            style={{ left: `${(level - 1) * 18 + 16}px` }}
+            className="absolute top-0 bottom-0 border-l border-gray-700"
+            style={{ left: `${(level - 1) * 20 + 19}px` }}
           />
         )}
         <button
-          onClick={toggleNode}
-          className="flex items-center w-full gap-2 rounded px-2 py-1.5 hover:bg-gray-800 transition-colors"
-          style={{ paddingLeft: `${level * 18 + 8}px` }}
+          onClick={() => toggleNode(node.id)}
+          className="flex items-center w-full gap-2 rounded px-2 py-1.5 hover:bg-gray-800/70 transition-all active:bg-gray-700 text-sm"
+          style={{ paddingLeft: `${level * 20 + 8}px` }}
         >
           {isFolder ? (
-            isExpanded ? <ChevronDown size={16} className="text-gray-400" /> : <ChevronRight size={16} className="text-gray-400" />
+            isExpanded ?
+              <ChevronDown size={16} className="text-gray-400" /> :
+              <ChevronRight size={16} className="text-gray-400" />
           ) : (
             <span className="w-4" />
           )}
-          {isFolder ? <Folder size={16} className="text-purple-400" /> : <FileText size={16} className="text-cyan-400" />}
-          <span>{node.name}</span>
+
+          {isFolder ? (
+            <Folder size={16} className="text-blue-400" />
+          ) : (
+            <FileText size={16} className="text-sky-400" />
+          )}
+
+          <span className="truncate">{node.name}</span>
         </button>
+
         {isFolder && isExpanded && node.children?.map(child => (
-          <TreeNode key={child.id} node={child} level={level + 1} />
+          <TreeNode
+            key={child.id}
+            node={child}
+            level={level + 1}
+            expandedNodes={expandedNodes}
+            toggleNode={toggleNode}
+          />
         ))}
       </div>
     );
   };
 
-  const getTreeStats = (nodes) => {
-    let folders = 0;
-    let files = 0;
+  const TreePage = () => {
+    const [expandedNodes, setExpandedNodes] = useState(new Set(['src', 'src-components', 'public']));
 
-    const visit = (items) => {
-      items.forEach((item) => {
-        if (item.type === 'folder') {
-          folders += 1;
-          if (item.children) visit(item.children);
-        } else {
-          files += 1;
-        }
+    const toggleNode = useCallback((id) => {
+      setExpandedNodes(prev => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
       });
-    };
-
-    visit(nodes);
-    return { folders, files, total: folders + files };
-  };
-
-  const TreeInsights = () => {
-    const stats = getTreeStats(fileTree);
-    const density = Math.round((stats.files / stats.total) * 100);
+    }, []);
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="rounded-xl bg-gray-800/70 border border-gray-700 p-4">
-          <div className="text-gray-400 text-sm">Total Nodes</div>
-          <div className="text-2xl font-bold mt-1">{stats.total}</div>
+      <div className="space-y-6">
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">Project Tree</h2>
+            <p className="text-gray-400">Interactive file structure explorer</p>
+          </div>
+          <div className="rounded-lg bg-blue-500/10 border border-blue-500/30 px-3 py-1.5 flex items-center gap-2 text-blue-400">
+            <FolderTree size={16} />
+            <span className="text-sm">Live View</span>
+          </div>
         </div>
-        <div className="rounded-xl bg-gray-800/70 border border-gray-700 p-4">
-          <div className="text-gray-400 text-sm">Folders</div>
-          <div className="text-2xl font-bold mt-1 text-purple-400">{stats.folders}</div>
-        </div>
-        <div className="rounded-xl bg-gray-800/70 border border-gray-700 p-4">
-          <div className="text-gray-400 text-sm">File Density</div>
-          <div className="text-2xl font-bold mt-1 text-cyan-400">{density}%</div>
+
+        <div className="rounded-2xl border border-gray-700 bg-gray-900/60 p-4">
+          {fileTree.map(node => (
+            <TreeNode
+              key={node.id}
+              node={node}
+              expandedNodes={expandedNodes}
+              toggleNode={toggleNode}
+            />
+          ))}
         </div>
       </div>
     );
   };
-
-  const TreePage = () => (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold">Tree Visualization</h2>
-          <p className="text-gray-400">Interactive project map with hierarchy insights.</p>
-        </div>
-        <div className="rounded-lg bg-purple-600/20 border border-purple-500/30 px-3 py-2 flex items-center gap-2 text-purple-300">
-          <BarChart3 size={16} />
-          <span className="text-sm">Live Structure View</span>
-        </div>
-      </div>
-
-      <TreeInsights />
-
-      <div className="rounded-xl border border-gray-700 bg-gray-900/70 p-4">
-        {fileTree.map(node => (
-          <TreeNode key={node.id} node={node} />
-        ))}
-      </div>
-    </div>
-  );
 
   const MusicPlayer = () => {
     if (!currentTrack) return null;
