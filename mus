@@ -15,26 +15,27 @@ import {
 } from 'lucide-react';
 
 const SATS_PER_BTC = 100_000_000;
-const AGENT_BTC_ADDRESS = 'bc1qagentgrowthvault9m5dx7f3x2yp8u4q6n0k7wz8c';
+// Deliberately unset: this prototype must never present a made-up address as a real wallet.
+const AGENT_BTC_ADDRESS = '';
 
 const marketSignals = [
   {
     label: 'Audience demand',
     value: 82,
     tone: 'emerald',
-    insight: 'Search intent and creator mentions are accelerating across three campaign themes.',
+    insight: 'Illustrative demo signal. Connect a verified analytics/search data source before treating this as live intelligence.',
   },
   {
     label: 'Bitcoin momentum',
     value: 64,
     tone: 'amber',
-    insight: 'Price action is constructive, but the agent waits for confirmation before scaling.',
+    insight: 'Illustrative demo signal. A production implementation should identify its market-data source and timestamp.',
   },
   {
     label: 'Cash runway',
     value: 91,
     tone: 'sky',
-    insight: 'Treasury reserves can fund 38 days of tests without touching the BTC vault.',
+    insight: 'Illustrative demo signal. Production runway should be calculated from verified cash-flow and expense data.',
   },
 ];
 
@@ -95,13 +96,19 @@ const AgentMarketingTool = () => {
   const [weeklyProfit, setWeeklyProfit] = useState(12500);
   const [riskLevel, setRiskLevel] = useState('Balanced');
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
 
   const plan = useMemo(() => {
-    const buyBudget = weeklyProfit * (riskLevel === 'Aggressive' ? 0.4 : riskLevel === 'Defensive' ? 0.15 : 0.25);
-    const btcToBuy = buyBudget / btcPrice;
+    const safeBtcPrice = Number.isFinite(btcPrice) && btcPrice > 0 ? btcPrice : 1;
+    const safeWeeklyProfit = Number.isFinite(weeklyProfit) && weeklyProfit >= 0 ? weeklyProfit : 0;
+    const allocationRate = riskLevel === 'Aggressive' ? 0.4 : riskLevel === 'Defensive' ? 0.15 : 0.25;
+    const takeProfitMultiplier = riskLevel === 'Aggressive' ? 1.22 : riskLevel === 'Defensive' ? 1.12 : 1.18;
+    const stopLossMultiplier = riskLevel === 'Aggressive' ? 0.86 : riskLevel === 'Defensive' ? 0.94 : 0.9;
+    const buyBudget = safeWeeklyProfit * allocationRate;
+    const btcToBuy = buyBudget / safeBtcPrice;
     const satsToBuy = Math.round(btcToBuy * SATS_PER_BTC);
-    const takeProfitPrice = btcPrice * (riskLevel === 'Aggressive' ? 1.22 : riskLevel === 'Defensive' ? 1.12 : 1.18);
-    const stopLossPrice = btcPrice * (riskLevel === 'Aggressive' ? 0.86 : riskLevel === 'Defensive' ? 0.94 : 0.9);
+    const takeProfitPrice = safeBtcPrice * takeProfitMultiplier;
+    const stopLossPrice = safeBtcPrice * stopLossMultiplier;
 
     return {
       buyBudget,
@@ -113,9 +120,21 @@ const AgentMarketingTool = () => {
   }, [btcPrice, weeklyProfit, riskLevel]);
 
   const copyAddress = async () => {
-    await navigator.clipboard?.writeText(AGENT_BTC_ADDRESS);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1800);
+    if (!AGENT_BTC_ADDRESS || !navigator.clipboard?.writeText) {
+      setCopyError(true);
+      setCopied(false);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(AGENT_BTC_ADDRESS);
+      setCopied(true);
+      setCopyError(false);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+      setCopyError(true);
+    }
   };
 
   return (
@@ -150,14 +169,12 @@ const AgentMarketingTool = () => {
               Turn marketing profits into a disciplined Bitcoin strategy.
             </h2>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
-              This prototype agent forecasts campaign ROI, routes a share of weekly profit to its own Bitcoin
-              address, and explains when it plans to buy, hold, or sell. It is a planning dashboard only, not
-              financial advice or an automated trading system.
+              This prototype agent forecasts campaign ROI, models a share of weekly profit for Bitcoin, and explains when it plans to buy, hold, or sell. It is a planning dashboard only, not financial advice or an automated trading system.
             </p>
             <div className="mt-8 grid gap-4 sm:grid-cols-3">
-              <Metric icon={Megaphone} label="Campaign ROI" value="164%" />
-              <Metric icon={Wallet} label="Vault address" value="Native SegWit" />
-              <Metric icon={Target} label="Payback target" value="21 days" />
+              <Metric icon={Megaphone} label="Campaign ROI" value="Illustrative" />
+              <Metric icon={Wallet} label="Vault address" value="Not configured" />
+              <Metric icon={Target} label="Payback target" value="Illustrative" />
             </div>
           </div>
 
@@ -171,13 +188,21 @@ const AgentMarketingTool = () => {
             </div>
             <div className="rounded-3xl bg-slate-950/80 p-5">
               <p className="mb-2 text-sm text-slate-400">Dedicated receive address</p>
-              <div className="break-all font-mono text-lg text-orange-200">{AGENT_BTC_ADDRESS}</div>
+              <div className="break-all font-mono text-lg text-orange-200">
+                {AGENT_BTC_ADDRESS || 'Not configured — demo only'}
+              </div>
               <button
                 onClick={copyAddress}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-500 px-4 py-3 font-black text-slate-950 transition hover:bg-orange-300"
+                disabled={!AGENT_BTC_ADDRESS}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-500 px-4 py-3 font-black text-slate-950 transition hover:bg-orange-300 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-orange-500"
               >
                 <Copy size={18} /> {copied ? 'Copied address' : 'Copy address'}
               </button>
+              {copyError && (
+                <p className="mt-2 text-sm text-amber-300" role="status">
+                  Wallet address is not configured or could not be copied.
+                </p>
+              )}
             </div>
             <div className="mt-5 grid grid-cols-2 gap-4">
               <div className="rounded-3xl bg-emerald-400/10 p-4">
@@ -230,6 +255,7 @@ const AgentMarketingTool = () => {
             <h3 className="mb-5 flex items-center gap-2 text-2xl font-black">
               <TrendingUp className="text-emerald-300" /> Profit-aware trade plan
             </h3>
+            <p className="mb-4 text-sm text-slate-400">Prototype rules only — not a validated trading strategy.</p>
             <div className="space-y-4">
               {tradingRules.map(({ action, trigger, allocation, icon: Icon }) => (
                 <div key={action} className="rounded-3xl bg-slate-900/80 p-5">
@@ -245,7 +271,10 @@ const AgentMarketingTool = () => {
           </div>
 
           <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6">
-            <h3 className="mb-5 text-2xl font-black">Marketing engine</h3>
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <h3 className="text-2xl font-black">Marketing engine</h3>
+              <span className="rounded-full bg-amber-400/10 px-3 py-1 text-xs font-bold text-amber-200">Illustrative demo data</span>
+            </div>
             <div className="grid gap-4">
               {campaignIdeas.map((campaign) => (
                 <div key={campaign.name} className="rounded-3xl bg-slate-900/80 p-5">
@@ -255,16 +284,16 @@ const AgentMarketingTool = () => {
                       <p className="text-sm text-slate-400">{campaign.channel}</p>
                     </div>
                     <span className="rounded-full bg-emerald-400/10 px-3 py-1 text-sm font-black text-emerald-200">
-                      {campaign.roi} ROI
+                      {campaign.roi} illustrative ROI
                     </span>
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                     <div className="rounded-2xl bg-white/5 p-3">
-                      <p className="text-slate-400">Spend</p>
+                      <p className="text-slate-400">Illustrative spend</p>
                       <p className="text-lg font-black">{campaign.spend}</p>
                     </div>
                     <div className="rounded-2xl bg-white/5 p-3">
-                      <p className="text-slate-400">Projected return</p>
+                      <p className="text-slate-400">Illustrative return</p>
                       <p className="text-lg font-black">{campaign.projectedReturn}</p>
                     </div>
                   </div>
@@ -294,8 +323,9 @@ const AgentMarketingTool = () => {
             <DollarSign className="mt-1 shrink-0" />
             <p>
               Demo safeguard: connect real exchange, wallet, and ad-platform APIs only after adding custody,
-              compliance, authentication, audit logs, and human approval workflows. The displayed Bitcoin address is
-              a placeholder for product design and should be replaced with a verified wallet address before use.
+              compliance, authentication, audit logs, and human approval workflows. No real Bitcoin address is
+              configured in this prototype. Market signals, campaign returns, and trading thresholds shown here are
+              illustrative and must not be treated as live financial data or validated performance projections.
             </p>
           </div>
         </section>
